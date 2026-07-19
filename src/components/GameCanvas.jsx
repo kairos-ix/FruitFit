@@ -11,8 +11,14 @@ export default function GameCanvas() {
   const ctxRef = useRef(null);
   const engineRef = useRef(null);
 
-  const { facingMode, phase, addScore, setCombo, resetCombo, addSlice, loseLife, clearShake } =
-    useGameStore();
+  const facingMode = useGameStore((s) => s.facingMode);
+  const phase = useGameStore((s) => s.phase);
+  const addScore = useGameStore((s) => s.addScore);
+  const setCombo = useGameStore((s) => s.setCombo);
+  const resetCombo = useGameStore((s) => s.resetCombo);
+  const addSlice = useGameStore((s) => s.addSlice);
+  const loseLife = useGameStore((s) => s.loseLife);
+  const clearShake = useGameStore((s) => s.clearShake);
 
   const isPlaying = phase === 'playing';
 

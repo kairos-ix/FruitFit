@@ -55,7 +55,7 @@ function defaultHandData() {
 export function useHandTracker(videoRef, active = true) {
   const landmarkerRef = useRef(null);
   const rafRef = useRef(null);
-  const lastTimeRef = useRef(0);
+  const lastVideoTimeRef = useRef(-1);
   const smoothedRef = useRef({ x: -1, y: -1 });
   const prevSmoothedRef = useRef({ x: -1, y: -1 });
   const trailRef = useRef([]); // recent normalized positions
@@ -106,10 +106,11 @@ export function useHandTracker(videoRef, active = true) {
     const landmarker = landmarkerRef.current;
     if (!video || !landmarker || video.readyState < 2) return;
 
-    // No frame-rate cap — run as fast as the camera delivers
-    // But skip duplicate timestamps (some browsers fire rAF faster than camera)
-    if (timestamp === lastTimeRef.current) return;
-    lastTimeRef.current = timestamp;
+    // Run inference only when the video has a new frame.
+    // This prevents 144Hz monitors from running MediaPipe 144 times a second and freezing the thread.
+    const videoTime = video.currentTime;
+    if (videoTime === lastVideoTimeRef.current || videoTime === 0) return;
+    lastVideoTimeRef.current = videoTime;
 
     const detection = landmarker.detectForVideo(video, timestamp);
     const landmarks = detection?.landmarks?.[0];
