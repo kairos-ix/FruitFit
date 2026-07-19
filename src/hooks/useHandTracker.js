@@ -11,11 +11,11 @@ const INDEX_TIP = 8;
 const INDEX_MCP = 5;
 
 // Adaptive smoothing range — lower values = more responsive, higher = smoother
-const SMOOTH_SLOW = 0.45; // when hand is nearly stationary (jitter suppression)
-const SMOOTH_FAST = 0.80; // during fast swipes (near raw tracking)
+const SMOOTH_SLOW = 0.55; // when hand is nearly stationary (jitter suppression)
+const SMOOTH_FAST = 1.0;  // during fast swipes (1.0 = raw tracking, ZERO latency gap)
 // Velocity thresholds for adaptive smoothing transition
-const VEL_SLOW = 0.005;
-const VEL_FAST = 0.04;
+const VEL_SLOW = 0.002;
+const VEL_FAST = 0.03;
 
 // Trail history length for multi-segment slice detection
 const TRAIL_HISTORY_LEN = 8;
@@ -150,13 +150,21 @@ export function useHandTracker(videoRef, active = true) {
     const alpha = SMOOTH_SLOW + (SMOOTH_FAST - SMOOTH_SLOW) * velT;
 
     // Apply exponential smoothing (higher alpha = more responsive)
-    const sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
-    const sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
+    let sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
+    let sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
 
     // Smoothed velocity
     const dx = isFirst ? 0 : sx - prev.x;
     const dy = isFirst ? 0 : sy - prev.y;
     const velocity = Math.hypot(dx, dy);
+
+    // Forward extrapolation to cancel out camera hardware latency (~30ms)
+    // Only apply when moving fast to prevent jitter when still
+    if (velocity > 0.01) {
+      const extrapolation = Math.min(1.5, velocity * 20); 
+      sx += dx * extrapolation;
+      sy += dy * extrapolation;
+    }
 
     // Large swing: MCP-to-tip length in screen space > threshold
     const swingDist = Math.hypot((1 - tip.x) - (1 - mcp.x), tip.y - mcp.y);
