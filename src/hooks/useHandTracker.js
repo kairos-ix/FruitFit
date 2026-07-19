@@ -150,8 +150,8 @@ export function useHandTracker(videoRef, active = true) {
     const alpha = SMOOTH_SLOW + (SMOOTH_FAST - SMOOTH_SLOW) * velT;
 
     // Apply exponential smoothing (higher alpha = more responsive)
-    let sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
-    let sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
+    const sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
+    const sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
 
     // Smoothed velocity
     const dx = isFirst ? 0 : sx - prev.x;
@@ -160,10 +160,12 @@ export function useHandTracker(videoRef, active = true) {
 
     // Forward extrapolation to cancel out camera hardware latency (~30ms)
     // Only apply when moving fast to prevent jitter when still
+    let outX = sx;
+    let outY = sy;
     if (velocity > 0.01) {
       const extrapolation = Math.min(1.5, velocity * 20); 
-      sx += dx * extrapolation;
-      sy += dy * extrapolation;
+      outX += dx * extrapolation;
+      outY += dy * extrapolation;
     }
 
     // Large swing: MCP-to-tip length in screen space > threshold
@@ -172,21 +174,24 @@ export function useHandTracker(videoRef, active = true) {
 
     // Update trail history (normalized coordinates)
     const trail = trailRef.current;
-    trail.push({ x: sx, y: sy });
+    const prevOutX = trail.length > 0 ? trail[trail.length - 1].x : outX;
+    const prevOutY = trail.length > 0 ? trail[trail.length - 1].y : outY;
+
+    trail.push({ x: outX, y: outY });
     if (trail.length > TRAIL_HISTORY_LEN) {
       trail.splice(0, trail.length - TRAIL_HISTORY_LEN);
     }
 
-    // Store previous smoothed position
+    // Store previous smoothed position (must NOT be extrapolated to prevent feedback loop!)
     prevSmoothedRef.current = { x: prev.x === -1 ? sx : prev.x, y: prev.y === -1 ? sy : prev.y };
     smoothedRef.current = { x: sx, y: sy };
 
     // Write directly to the shared ref — no React setState
     handDataRef.current = {
-      tipX: sx,
-      tipY: sy,
-      prevTipX: prevSmoothedRef.current.x,
-      prevTipY: prevSmoothedRef.current.y,
+      tipX: outX,
+      tipY: outY,
+      prevTipX: prevOutX,
+      prevTipY: prevOutY,
       velocity,
       handVisible: true,
       isLargeSwing,
