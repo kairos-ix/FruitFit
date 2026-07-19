@@ -31,6 +31,7 @@ export class GameEngine {
     this.elapsed = 0;     // total ms
     this.combo = 0;
     this.comboTimer = 0;  // ms since last slice (combo resets after 1500ms)
+    this.lastDelta = 16;  // last frame delta for render
     this.W = window.innerWidth;
     this.H = window.innerHeight;
   }
@@ -57,6 +58,7 @@ export class GameEngine {
    */
   update(delta, handData) {
     this.elapsed += delta;
+    this.lastDelta = delta;
 
     // --- Combo timer ---
     if (this.combo > 0) {
@@ -121,9 +123,9 @@ export class GameEngine {
 
     // --- Update motion trail ---
     if (handData?.handVisible) {
-      this.trail.addPoint(handData.tipX * this.W, handData.tipY * this.H, true);
+      this.trail.addPoint(handData.tipX * this.W, handData.tipY * this.H, true, handData.velocity);
     } else {
-      this.trail.addPoint(-1, -1, false);
+      this.trail.addPoint(-1, -1, false, 0);
     }
   }
 
@@ -143,6 +145,6 @@ export class GameEngine {
     for (const p of this.particles) p.draw(ctx);
 
     // Draw motion trail on top of everything
-    this.trail.draw(ctx);
+    this.trail.draw(ctx, this.lastDelta);
   }
 }

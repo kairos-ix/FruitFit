@@ -22,9 +22,11 @@ export function useCamera(facingMode = 'user') {
       const constraints = {
         video: {
           facingMode: facing,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 60 },
+          // Lower resolution for performance — MediaPipe internally resizes anyway.
+          // 640×480 is plenty for hand detection and frees GPU/CPU for the game loop.
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 30 },
         },
         audio: false,
       };

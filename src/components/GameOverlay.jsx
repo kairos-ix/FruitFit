@@ -64,6 +64,7 @@ export default function GameOverlay() {
                 score={score}
                 maxCombo={maxCombo}
                 slices={slices}
+                bigSwings={bigSwings}
                 calories={calories}
                 mins={mins}
                 secs={secs}
@@ -94,7 +95,7 @@ function StatRow({ label, value, emoji }) {
   );
 }
 
-function GameOverCard({ score, maxCombo, slices, calories, mins, secs, onPlayAgain, onHome, onStats }) {
+function GameOverCard({ score, maxCombo, slices, bigSwings, calories, mins, secs, onPlayAgain, onHome, onStats }) {
   return (
     <div className="p-7">
       <div className="text-center mb-6">
@@ -111,7 +112,7 @@ function GameOverCard({ score, maxCombo, slices, calories, mins, secs, onPlayAga
       <div className="mb-6 space-y-0">
         <StatRow emoji="🔥" label="Best Combo" value={`${maxCombo}x`} />
         <StatRow emoji="🍓" label="Fruits Sliced" value={slices} />
-        <StatRow emoji="💪" label="Big Swings" value={slices} />
+        <StatRow emoji="💪" label="Big Swings" value={bigSwings} />
         <StatRow emoji="⚡" label="Calories" value={`~${calories} kcal`} />
         <StatRow emoji="⏱️" label="Time" value={`${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`} />
       </div>

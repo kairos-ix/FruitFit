@@ -52,3 +52,33 @@ export function lerp(a, b, t) {
 export function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }
+
+/**
+ * Catmull-Rom spline interpolation between four control points.
+ * Returns the interpolated {x, y} at parameter t ∈ [0, 1] on the segment p1→p2.
+ *
+ * @param {{x:number,y:number}} p0
+ * @param {{x:number,y:number}} p1
+ * @param {{x:number,y:number}} p2
+ * @param {{x:number,y:number}} p3
+ * @param {number} t - 0..1
+ * @returns {{x:number,y:number}}
+ */
+export function catmullRomPoint(p0, p1, p2, p3, t) {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return {
+    x:
+      0.5 *
+      (2 * p1.x +
+        (-p0.x + p2.x) * t +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+    y:
+      0.5 *
+      (2 * p1.y +
+        (-p0.y + p2.y) * t +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+  };
+}

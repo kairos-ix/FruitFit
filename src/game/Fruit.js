@@ -73,6 +73,7 @@ export class Fruit {
 
   isOffScreen(W, H) {
     if (this.state === 'flying') return this.y > H + 80;
+    if (this.state === 'missed') return true; // remove immediately after being marked
     return (
       this.sliceAlpha <= 0 ||
       (this.halfL.y > H + 100 && this.halfR.y > H + 100)

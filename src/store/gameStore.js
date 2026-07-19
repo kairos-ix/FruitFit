@@ -57,6 +57,9 @@ const useGameStore = create((set, get) => ({
       return { combo, maxCombo: Math.max(s.maxCombo, combo) };
     }),
 
+  setCombo: (combo) =>
+    set((s) => ({ combo, maxCombo: Math.max(s.maxCombo, combo) })),
+
   resetCombo: () => set({ combo: 0 }),
 
   addSlice: (isBigSwing = false) =>

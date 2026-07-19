@@ -2,47 +2,51 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useCamera } from '../hooks/useCamera.js';
 import { useHandTracker } from '../hooks/useHandTracker.js';
 import { useGameLoop } from '../hooks/useGameLoop.js';
+import { useSound } from '../hooks/useSound.js';
 import { GameEngine } from '../game/GameEngine.js';
 import useGameStore from '../store/gameStore.js';
 
 export default function GameCanvas() {
   const canvasRef = useRef(null);
+  const ctxRef = useRef(null);
   const engineRef = useRef(null);
-  const handDataRef = useRef(null);
 
-  const { facingMode, phase, addScore, incrementCombo, resetCombo, addSlice, loseLife, clearShake } =
+  const { facingMode, phase, addScore, setCombo, resetCombo, addSlice, loseLife, clearShake } =
     useGameStore();
 
   const isPlaying = phase === 'playing';
 
+  // Sound effects
+  const { play } = useSound();
+
   // Camera
   const { videoRef, error: camError, ready: camReady } = useCamera(facingMode);
 
-  // Hand tracking
-  const handData = useHandTracker(videoRef, isPlaying && camReady);
-
-  // Keep latest hand data in a ref for the game loop
-  useEffect(() => {
-    handDataRef.current = handData;
-  }, [handData]);
+  // Hand tracking — returns a mutable ref (no React state, no re-renders)
+  const handDataRef = useHandTracker(videoRef, isPlaying && camReady);
 
   // Instantiate the engine once
   useEffect(() => {
     engineRef.current = new GameEngine({
       onScore: (points, combo) => {
         addScore(points);
-        if (combo > 1) incrementCombo();
+        play('slice');
       },
       onCombo: (combo) => {
-        if (combo >= 2) incrementCombo();
+        // Engine is the source of truth for combo — set directly, don't increment
+        setCombo(combo);
+        if (combo >= 3) play('combo');
       },
       onMiss: () => {
-        // Only lose a life for missed fruits if combo was active (optional rule)
-        // PRD says bombs and misses cost lives — keep it relaxed
+        // PRD: missed fruits cost a life (3 strikes rule)
+        loseLife();
+        play('miss');
+        setTimeout(() => clearShake(), 400);
       },
       onBombHit: () => {
         resetCombo();
         loseLife();
+        play('bomb');
         setTimeout(() => clearShake(), 500);
       },
       onSlice: (isBigSwing) => {
@@ -56,6 +60,8 @@ export default function GameCanvas() {
       if (!canvas) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      // Re-acquire context after resize (canvas dimensions change invalidates it)
+      ctxRef.current = canvas.getContext('2d', { willReadFrequently: false });
       engineRef.current?.resize(window.innerWidth, window.innerHeight);
     };
     resize();
@@ -74,18 +80,17 @@ export default function GameCanvas() {
     }
   }, [phase]);
 
-  // Game loop
+  // Game loop — read hand data directly from the ref (zero latency)
   const loop = useCallback(
     (delta) => {
-      const canvas = canvasRef.current;
       const engine = engineRef.current;
-      if (!canvas || !engine) return;
+      const ctx = ctxRef.current;
+      if (!ctx || !engine) return;
 
-      const ctx = canvas.getContext('2d');
       engine.update(delta, handDataRef.current);
       engine.render(ctx);
     },
-    []
+    [handDataRef]
   );
 
   useGameLoop(loop, isPlaying);

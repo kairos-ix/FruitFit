@@ -21,7 +21,9 @@ export default function GamePage() {
   useEffect(() => {
     if (phase !== 'playing') return;
 
-    let startTime = Date.now() - duration * 1000;
+    // Capture current duration so the effect doesn't re-fire on every tick
+    const initialDuration = useGameStore.getState().duration;
+    let startTime = Date.now() - initialDuration * 1000;
     let timerId;
 
     const tick = () => {
@@ -38,7 +40,8 @@ export default function GamePage() {
 
     timerId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timerId);
-  }, [phase, mode, duration, setDuration, setPhase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, mode]);
 
   // Pause on blur or escape
   useEffect(() => {
