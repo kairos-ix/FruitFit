@@ -28,9 +28,10 @@ export class GameEngine {
     this.H = window.innerHeight;
 
     // Frame-interpolation state for smooth trail between camera frames
-    this._lastHandFrameId = -1;
     this._interpX = -1;
     this._interpY = -1;
+    this._prevInterpX = -1;
+    this._prevInterpY = -1;
   }
 
   resize(W, H) {
@@ -46,9 +47,10 @@ export class GameEngine {
     this.elapsed = 0;
     this.combo = 0;
     this.comboTimer = 0;
-    this._lastHandFrameId = -1;
     this._interpX = -1;
     this._interpY = -1;
+    this._prevInterpX = -1;
+    this._prevInterpY = -1;
   }
 
   /**
@@ -73,24 +75,34 @@ export class GameEngine {
 
     for (const f of this.fruits) f.update(delta, GRAVITY);
 
-    if (handData?.handVisible) {
-      const isNewCameraFrame = handData._frameId !== this._lastHandFrameId;
-
-      if (isNewCameraFrame) {
-        this._lastHandFrameId = handData._frameId;
+    if (handData?.handVisible && handData.tipX !== -1) {
+      if (this._interpX === -1) {
         this._interpX = handData.tipX;
         this._interpY = handData.tipY;
+        this._prevInterpX = handData.tipX;
+        this._prevInterpY = handData.tipY;
       } else {
-        // Between camera frames: glide toward current position using velocity
-        this._interpX += handData.velX * 0.5;
-        this._interpY += handData.velY * 0.5;
+        // LERP (exponential smoothing) directly at 60fps
+        this._interpX += (handData.tipX - this._interpX) * 0.5;
+        this._interpY += (handData.tipY - this._interpY) * 0.5;
       }
+
+      // Calculate the visual 60fps velocity for hit expansion and trail rendering
+      const velX = this._interpX - this._prevInterpX;
+      const velY = this._interpY - this._prevInterpY;
+      const velocity = Math.hypot(velX, velY);
+
+      this._prevInterpX = this._interpX;
+      this._prevInterpY = this._interpY;
 
       // Use interpolated position for slice detection
       const interpHandData = {
         ...handData,
         tipX: this._interpX,
         tipY: this._interpY,
+        prevTipX: this._prevInterpX,
+        prevTipY: this._prevInterpY,
+        velocity: velocity, // override with the 60fps smoothed velocity
       };
 
       const { sliced } = this.detector.detect(this.fruits, interpHandData, this.W, this.H);
@@ -124,12 +136,14 @@ export class GameEngine {
         this._interpX * this.W,
         this._interpY * this.H,
         true,
-        handData.velocity
+        velocity
       );
     } else {
       this.trail.addPoint(-1, -1, false, 0);
       this._interpX = -1;
       this._interpY = -1;
+      this._prevInterpX = -1;
+      this._prevInterpY = -1;
     }
 
     for (const p of this.particles) p.update(delta);

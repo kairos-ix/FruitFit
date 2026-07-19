@@ -7,8 +7,8 @@ const MIN_DISTANCE = 0.004;
 
 // Velocity-based hit expansion
 // At high velocity the effective radius grows, making fast swipes more forgiving
-const HIT_EXPANSION_FACTOR = 600; // px multiplier applied to normalized velocity
-const MAX_HIT_EXPANSION = 18;     // max extra px added to radius
+const HIT_EXPANSION_FACTOR = 300;
+const MAX_HIT_EXPANSION = 8;
 
 /**
  * Path-based slice detection with multi-segment trail and velocity-expanded hitboxes.

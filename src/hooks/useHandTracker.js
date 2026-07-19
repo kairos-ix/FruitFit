@@ -121,13 +121,9 @@ export function useHandTracker(videoRef, active = true) {
     const prev = smoothedRef.current;
     const isFirst = prev.x === -1;
 
-    const rawDx = isFirst ? 0 : rawX - prev.x;
-    const rawDy = isFirst ? 0 : rawY - prev.y;
-    const rawVel = Math.hypot(rawDx, rawDy);
-
-    const velT = Math.min(1, Math.max(0, (rawVel - VEL_SLOW) / (VEL_FAST - VEL_SLOW)));
-    const alpha = SMOOTH_SLOW + (SMOOTH_FAST - SMOOTH_SLOW) * velT;
-
+    // We apply very light smoothing here just to reduce camera jitter.
+    // The GameEngine will do the heavy lifting of interpolating this to 60fps.
+    const alpha = 0.6; 
     const sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
     const sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
 
@@ -154,8 +150,6 @@ export function useHandTracker(videoRef, active = true) {
       tipY: sy,
       prevTipX,
       prevTipY,
-      velX: dx,
-      velY: dy,
       velocity,
       handVisible: true,
       isLargeSwing,

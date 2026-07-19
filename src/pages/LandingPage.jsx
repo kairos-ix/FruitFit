@@ -92,11 +92,6 @@ export default function LandingPage() {
         </div>
       )}
 
-      <div className="absolute bottom-4 left-0 right-0 text-center">
-        <p className="text-white/30 text-sm font-medium tracking-wide">
-          Made with ❤️ by <a href="#" className="text-white/50 hover:text-white transition-colors">sahil maurya</a>
-        </p>
-      </div>
     </div>
   );
 }
