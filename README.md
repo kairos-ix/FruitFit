@@ -1,16 +1,34 @@
-# React + Vite
+# 🍉🗡️ FruitFit
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Hey there! Welcome to **FruitFit**! 👋
 
-Currently, two official plugins are available:
+This is just a **super fun, experimental side project** I built to mess around with browser-based hand tracking. The idea is simple: turn your webcam into a motion controller and slice virtual fruits like a ninja, right in your browser! No VR headsets or fancy controllers needed. 
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+I made this just for fun to see how well MediaPipe's hand tracking could run in a React game loop, and honestly, it turned out pretty awesome. The game runs entirely locally in your browser, so your webcam feed never leaves your device.
 
-## React Compiler
+## What is it?
+- A fast-paced, fruit-slicing mini-game.
+- Uses your webcam and tracks your index finger as the sword. 🗡️
+- Just a fun experiment to burn a few calories from your chair!
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How to play
+1. Allow camera access (don't worry, everything stays on your device!).
+2. Stand back a little or just use your hands.
+3. Swipe your index finger through the air to slice fruits and avoid the bombs! 💣
 
-## Expanding the ESLint configuration
+## Tech Stack
+- **React & Vite** for the UI and fast builds.
+- **MediaPipe Tasks Vision** for the magic hand tracking.
+- **Tailwind CSS** for making things look pretty.
+- A custom, vanilla JS game engine I whipped up to handle the physics, drawing, and performance optimization (so it doesn't melt your laptop!).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Running it locally
+
+If you want to poke around the code:
+```bash
+npm install
+npm run dev
+```
+
+---
+*Just a fun project made to learn and experiment. Enjoy! 🍎🍍🍉*
