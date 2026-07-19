@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Howl, Howler } from 'howler';
 
 // Sound definitions — using freely-available CDN sounds or base64 data URIs
@@ -79,7 +79,7 @@ function playBuffer(type, volume = 1) {
     source.connect(gainNode);
     gainNode.connect(ctx.destination);
     source.start(0);
-  } catch (e) {
+  } catch {
     // Silently fail if audio is not available
   }
 }
@@ -89,5 +89,5 @@ function playBuffer(type, volume = 1) {
  */
 export function useSound() {
   const playRef = useRef((type) => playBuffer(type));
-  return { play: playRef.current };
+  return { play: (type) => playRef.current(type) };
 }

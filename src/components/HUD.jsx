@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../store/gameStore.js';
 
@@ -43,7 +44,6 @@ export default function HUD() {
   const maxLives = 3;
   const isEndless = mode === 'endless';
 
-  // Format timer
   const modeSecs = isEndless ? null : mode * 60;
   const remaining = modeSecs !== null ? Math.max(0, modeSecs - Math.floor(duration)) : null;
   const displaySecs = remaining !== null ? remaining : Math.floor(duration);
@@ -53,7 +53,6 @@ export default function HUD() {
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none">
-      {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 flex items-start justify-between px-5 pt-4">
         {/* Score */}
         <div className="flex flex-col items-start">
@@ -69,7 +68,6 @@ export default function HUD() {
           </motion.span>
         </div>
 
-        {/* Timer */}
         <div className="flex flex-col items-center">
           <span className="text-white/60 text-xs font-semibold uppercase tracking-widest">
             {isEndless ? 'Time' : 'Left'}
@@ -82,7 +80,6 @@ export default function HUD() {
           </span>
         </div>
 
-        {/* Lives */}
         <div className="flex flex-col items-end gap-1">
           <span className="text-white/60 text-xs font-semibold uppercase tracking-widest">Lives</span>
           <div className="flex gap-1">
@@ -93,7 +90,6 @@ export default function HUD() {
         </div>
       </div>
 
-      {/* Combo badge — centred below score */}
       <div className="absolute top-20 left-0 right-0 flex justify-center">
         <ComboTag combo={combo} />
       </div>

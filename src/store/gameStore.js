@@ -37,7 +37,7 @@ const INITIAL_STATE = {
   screenShake: false,
 };
 
-const useGameStore = create((set, get) => ({
+const useGameStore = create((set) => ({
   ...INITIAL_STATE,
 
   // --- Actions ---

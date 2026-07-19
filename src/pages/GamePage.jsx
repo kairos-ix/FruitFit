@@ -8,7 +8,7 @@ import GameOverlay from '../components/GameOverlay.jsx';
 
 export default function GamePage() {
   const navigate = useNavigate();
-  const { phase, mode, duration, screenShake, setPhase, setDuration, resetGame } = useGameStore();
+  const { phase, mode, screenShake, setPhase, setDuration, resetGame } = useGameStore();
 
   // If page reloaded, go back home
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import ModeSelector from '../components/ModeSelector.jsx';
 import useGameStore from '../store/gameStore.js';
@@ -10,8 +11,8 @@ export default function LandingPage() {
   const [hasCamera, setHasCamera] = useState(null);
 
   useEffect(() => {
-    // Quick check if media devices are available
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasCamera(true);
     } else {
       setHasCamera(false);
@@ -19,7 +20,6 @@ export default function LandingPage() {
   }, []);
 
   const handleStart = async () => {
-    // Request permission early so the game page doesn't glitch as hard
     try {
       if (hasCamera) {
         await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
@@ -35,7 +35,6 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
          style={{ background: 'radial-gradient(circle at center, #1e1332 0%, #0a0a0a 100%)' }}>
       
-      {/* Background decorations */}
       <div className="absolute top-10 left-10 text-6xl opacity-10 rotate-12 blur-sm pointer-events-none">🍉</div>
       <div className="absolute bottom-20 right-10 text-8xl opacity-10 -rotate-12 blur-sm pointer-events-none">🍎</div>
       <div className="absolute top-40 right-32 text-5xl opacity-5 rotate-45 blur-sm pointer-events-none">🍍</div>
@@ -88,10 +87,16 @@ export default function LandingPage() {
       </motion.div>
 
       {hasCamera === false && (
-        <div className="absolute bottom-5 left-0 right-0 text-center text-red-400 text-sm">
+        <div className="absolute bottom-12 left-0 right-0 text-center text-red-400 text-sm">
           Warning: Camera not detected. Game requires camera.
         </div>
       )}
+
+      <div className="absolute bottom-4 left-0 right-0 text-center">
+        <p className="text-white/30 text-sm font-medium tracking-wide">
+          Made with ❤️ by <a href="#" className="text-white/50 hover:text-white transition-colors">sahil maurya</a>
+        </p>
+      </div>
     </div>
   );
 }

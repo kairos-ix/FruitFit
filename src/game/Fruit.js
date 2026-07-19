@@ -97,12 +97,10 @@ export class Fruit {
     ctx.translate(x, y);
     ctx.rotate(rot);
 
-    // Shadow
     ctx.shadowColor = 'rgba(0,0,0,0.3)';
     ctx.shadowBlur = 12;
     ctx.shadowOffsetY = 6;
 
-    // Outer circle
     const grad = ctx.createRadialGradient(-this.radius * 0.3, -this.radius * 0.3, 0, 0, 0, this.radius);
     grad.addColorStop(0, this._lighten(this.type.outerColor, 0.4));
     grad.addColorStop(1, this.type.outerColor);
@@ -113,10 +111,8 @@ export class Fruit {
 
     ctx.shadowColor = 'transparent';
 
-    // Fruit-specific details
     this._drawDetails(ctx);
 
-    // Highlight gloss
     const gloss = ctx.createRadialGradient(-this.radius * 0.35, -this.radius * 0.35, 0, -this.radius * 0.2, -this.radius * 0.2, this.radius * 0.55);
     gloss.addColorStop(0, 'rgba(255,255,255,0.45)');
     gloss.addColorStop(1, 'rgba(255,255,255,0)');
@@ -132,7 +128,6 @@ export class Fruit {
     const r = this.radius;
     switch (this.type.id) {
       case 'watermelon': {
-        // Green rind stripes
         ctx.strokeStyle = '#1a5c2a';
         ctx.lineWidth = 2;
         for (let i = -2; i <= 2; i++) {
@@ -144,7 +139,6 @@ export class Fruit {
         break;
       }
       case 'apple': {
-        // Stem
         ctx.strokeStyle = '#5d4037';
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
@@ -155,7 +149,6 @@ export class Fruit {
         break;
       }
       case 'orange': {
-        // Segments
         ctx.strokeStyle = 'rgba(0,0,0,0.15)';
         ctx.lineWidth = 1.5;
         for (let i = 0; i < 6; i++) {
@@ -167,7 +160,6 @@ export class Fruit {
         break;
       }
       case 'strawberry': {
-        // Seeds
         ctx.fillStyle = '#c62828';
         for (let i = 0; i < 6; i++) {
           const sx = Math.cos((i * Math.PI * 2) / 6) * r * 0.5;
@@ -179,7 +171,6 @@ export class Fruit {
         break;
       }
       case 'grape': {
-        // Shine dot
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
         ctx.arc(-r * 0.25, -r * 0.25, r * 0.2, 0, Math.PI * 2);
@@ -200,7 +191,6 @@ export class Fruit {
     const startAngle = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     const endAngle = side === 'left' ? (3 * Math.PI) / 2 : Math.PI / 2;
 
-    // Flesh (inner color)
     ctx.fillStyle = this.type.innerColor;
     ctx.beginPath();
     ctx.arc(0, 0, r, startAngle, endAngle);
@@ -208,7 +198,6 @@ export class Fruit {
     ctx.closePath();
     ctx.fill();
 
-    // Outer skin
     const grad = ctx.createRadialGradient(0, 0, r * 0.5, 0, 0, r);
     grad.addColorStop(0, this._lighten(this.type.outerColor, 0.2));
     grad.addColorStop(1, this.type.outerColor);
@@ -219,7 +208,6 @@ export class Fruit {
     ctx.closePath();
     ctx.fill();
 
-    // Cut line highlight
     ctx.strokeStyle = 'rgba(255,255,255,0.7)';
     ctx.lineWidth = 2;
     ctx.beginPath();

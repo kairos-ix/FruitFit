@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { getSessions, getLifetimeStats, clearSessions } from '../utils/storage.js';
 import { getIntensityLabel } from '../utils/calories.js';

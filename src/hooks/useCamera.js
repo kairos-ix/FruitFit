@@ -48,6 +48,7 @@ export function useCamera(facingMode = 'user') {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     startCamera(facingMode);
     return () => {
       if (streamRef.current) {

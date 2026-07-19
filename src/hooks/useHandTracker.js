@@ -98,9 +98,9 @@ export function useHandTracker(videoRef, active = true) {
     };
   }, []);
 
-  const detect = useCallback((timestamp) => {
+  const detect = useCallback(function detectFn(timestamp) {
     if (!active) return;
-    rafRef.current = requestAnimationFrame(detect);
+    rafRef.current = requestAnimationFrame(detectFn);
 
     const video = videoRef.current;
     const landmarker = landmarkerRef.current;

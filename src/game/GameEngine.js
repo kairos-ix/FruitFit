@@ -60,7 +60,6 @@ export class GameEngine {
     this.elapsed += delta;
     this.lastDelta = delta;
 
-    // --- Combo timer ---
     if (this.combo > 0) {
       this.comboTimer += delta;
       if (this.comboTimer > 1500) {
@@ -69,14 +68,11 @@ export class GameEngine {
       }
     }
 
-    // --- Spawn ---
     const newEntities = this.spawner.update(delta, this.W, this.H, this.elapsed);
     this.fruits.push(...newEntities);
 
-    // --- Update entities ---
     for (const f of this.fruits) f.update(delta, GRAVITY);
 
-    // --- Slice detection ---
     if (handData?.handVisible) {
       const { sliced } = this.detector.detect(this.fruits, handData, this.W, this.H);
 
@@ -105,11 +101,9 @@ export class GameEngine {
       }
     }
 
-    // --- Update particles ---
     for (const p of this.particles) p.update(delta);
     this.particles = this.particles.filter((p) => !p.isDead());
 
-    // --- Check misses ---
     const missedFruits = this.fruits.filter(
       (f) => f instanceof Fruit && f.state === 'flying' && f.isOffScreen(this.W, this.H)
     );
@@ -118,10 +112,8 @@ export class GameEngine {
       this.callbacks.onMiss?.();
     }
 
-    // --- Remove off-screen entities ---
     this.fruits = this.fruits.filter((f) => !f.isOffScreen(this.W, this.H));
 
-    // --- Update motion trail ---
     if (handData?.handVisible) {
       this.trail.addPoint(handData.tipX * this.W, handData.tipY * this.H, true, handData.velocity);
     } else {
@@ -138,13 +130,10 @@ export class GameEngine {
     const { W, H } = this;
     ctx.clearRect(0, 0, W, H);
 
-    // Draw fruits and bombs
     for (const f of this.fruits) f.draw(ctx);
 
-    // Draw particles on top
     for (const p of this.particles) p.draw(ctx);
 
-    // Draw motion trail on top of everything
     this.trail.draw(ctx, this.lastDelta);
   }
 }

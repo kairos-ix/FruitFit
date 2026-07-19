@@ -22,19 +22,13 @@ export default function GameCanvas() {
 
   const isPlaying = phase === 'playing';
 
-  // Sound effects
   const { play } = useSound();
-
-  // Camera
   const { videoRef, error: camError, ready: camReady } = useCamera(facingMode);
-
-  // Hand tracking — returns a mutable ref (no React state, no re-renders)
   const handDataRef = useHandTracker(videoRef, isPlaying && camReady);
 
-  // Instantiate the engine once
   useEffect(() => {
     engineRef.current = new GameEngine({
-      onScore: (points, combo) => {
+      onScore: (points) => {
         addScore(points);
         play('slice');
       },
@@ -60,7 +54,6 @@ export default function GameCanvas() {
       },
     });
 
-    // Size canvas to window
     const resize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -79,14 +72,12 @@ export default function GameCanvas() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset engine when game starts
   useEffect(() => {
     if (phase === 'playing') {
       engineRef.current?.reset();
     }
   }, [phase]);
 
-  // Game loop — read hand data directly from the ref (zero latency)
   const loop = useCallback(
     (delta) => {
       const engine = engineRef.current;

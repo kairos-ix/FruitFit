@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../store/gameStore.js';
 
@@ -11,6 +12,7 @@ export default function CountdownOverlay() {
 
   useEffect(() => {
     if (!visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep(0);
       return;
     }
