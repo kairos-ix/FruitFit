@@ -5,66 +5,52 @@ const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wa
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
-// Index fingertip landmark index
 const INDEX_TIP = 8;
-// Index finger MCP (base knuckle) for large swing measurement
 const INDEX_MCP = 5;
 
-// Adaptive smoothing range — lower values = more responsive, higher = smoother
-const SMOOTH_SLOW = 0.55; // when hand is nearly stationary (jitter suppression)
-const SMOOTH_FAST = 1.0;  // during fast swipes (1.0 = raw tracking, ZERO latency gap)
-// Velocity thresholds for adaptive smoothing transition
-const VEL_SLOW = 0.002;
+// Adaptive smoothing — lower = smoother, higher = more responsive
+const SMOOTH_SLOW = 0.50;
+const SMOOTH_FAST = 0.95;
+const VEL_SLOW = 0.003;
 const VEL_FAST = 0.03;
 
-// Trail history length for multi-segment slice detection
 const TRAIL_HISTORY_LEN = 8;
-
-// Number of frames without hand before we declare hand lost
-// Prevents flicker when MediaPipe briefly loses the hand between frames
 const HAND_LOST_GRACE_FRAMES = 3;
 
-/**
- * Default hand data shape — used as initial value and when hand is not visible.
- */
 function defaultHandData() {
   return {
     tipX: -1,
     tipY: -1,
     prevTipX: -1,
     prevTipY: -1,
+    velX: 0,
+    velY: 0,
     velocity: 0,
     handVisible: false,
     isLargeSwing: false,
-    // Normalized position trail for multi-segment slice detection
-    // Each entry: { x, y } in 0..1 space
     trailHistory: [],
+    _frameId: 0,
   };
 }
 
 /**
  * Initialises MediaPipe HandLandmarker and runs per-frame inference.
+ * Returns a mutable ref — game loop reads handDataRef.current directly.
  *
- * Returns a **ref** (not state) to avoid React re-renders on every frame.
- * Read `handDataRef.current` from your game loop.
- *
- * @param {React.RefObject} videoRef - video element ref
- * @param {boolean} active - whether to run tracking
- * @returns {React.RefObject} handDataRef
+ * The ref also includes velX/velY so the game engine can interpolate
+ * between camera frames for buttery-smooth 60fps trail rendering.
  */
 export function useHandTracker(videoRef, active = true) {
   const landmarkerRef = useRef(null);
   const rafRef = useRef(null);
   const lastVideoTimeRef = useRef(-1);
   const smoothedRef = useRef({ x: -1, y: -1 });
-  const prevSmoothedRef = useRef({ x: -1, y: -1 });
-  const trailRef = useRef([]); // recent normalized positions
+  const trailRef = useRef([]);
   const handLostCountRef = useRef(0);
+  const frameIdRef = useRef(0);
 
-  // Shared mutable ref — game loop reads this directly (no React state)
   const handDataRef = useRef(defaultHandData());
 
-  // Initialise the landmarker once
   useEffect(() => {
     let cancelled = false;
 
@@ -106,8 +92,6 @@ export function useHandTracker(videoRef, active = true) {
     const landmarker = landmarkerRef.current;
     if (!video || !landmarker || video.readyState < 2) return;
 
-    // Run inference only when the video has a new frame.
-    // This prevents 144Hz monitors from running MediaPipe 144 times a second and freezing the thread.
     const videoTime = video.currentTime;
     if (videoTime === lastVideoTimeRef.current || videoTime === 0) return;
     lastVideoTimeRef.current = videoTime;
@@ -117,9 +101,7 @@ export function useHandTracker(videoRef, active = true) {
 
     if (!landmarks) {
       handLostCountRef.current++;
-      // Grace period: don't immediately declare hand lost
       if (handLostCountRef.current > HAND_LOST_GRACE_FRAMES) {
-        prevSmoothedRef.current = { x: -1, y: -1 };
         smoothedRef.current = { x: -1, y: -1 };
         trailRef.current = [];
         handDataRef.current = defaultHandData();
@@ -127,75 +109,58 @@ export function useHandTracker(videoRef, active = true) {
       return;
     }
 
-    // Hand found — reset grace counter
     handLostCountRef.current = 0;
+    frameIdRef.current++;
 
     const tip = landmarks[INDEX_TIP];
     const mcp = landmarks[INDEX_MCP];
 
-    // Raw normalized coords (0-1). Mirror x for front cam.
     const rawX = 1 - tip.x;
     const rawY = tip.y;
 
     const prev = smoothedRef.current;
     const isFirst = prev.x === -1;
 
-    // Compute raw velocity for adaptive smoothing decision
     const rawDx = isFirst ? 0 : rawX - prev.x;
     const rawDy = isFirst ? 0 : rawY - prev.y;
     const rawVel = Math.hypot(rawDx, rawDy);
 
-    // Adaptive smoothing: lerp between SMOOTH_SLOW and SMOOTH_FAST based on velocity
     const velT = Math.min(1, Math.max(0, (rawVel - VEL_SLOW) / (VEL_FAST - VEL_SLOW)));
     const alpha = SMOOTH_SLOW + (SMOOTH_FAST - SMOOTH_SLOW) * velT;
 
-    // Apply exponential smoothing (higher alpha = more responsive)
     const sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
     const sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
 
-    // Smoothed velocity
     const dx = isFirst ? 0 : sx - prev.x;
     const dy = isFirst ? 0 : sy - prev.y;
     const velocity = Math.hypot(dx, dy);
 
-    // Forward extrapolation to cancel out camera hardware latency (~30ms)
-    // Only apply when moving fast to prevent jitter when still
-    let outX = sx;
-    let outY = sy;
-    if (velocity > 0.01) {
-      const extrapolation = Math.min(1.5, velocity * 20); 
-      outX += dx * extrapolation;
-      outY += dy * extrapolation;
-    }
-
-    // Large swing: MCP-to-tip length in screen space > threshold
     const swingDist = Math.hypot((1 - tip.x) - (1 - mcp.x), tip.y - mcp.y);
     const isLargeSwing = velocity > 0.012 && swingDist > 0.08;
 
-    // Update trail history (normalized coordinates)
     const trail = trailRef.current;
-    const prevOutX = trail.length > 0 ? trail[trail.length - 1].x : outX;
-    const prevOutY = trail.length > 0 ? trail[trail.length - 1].y : outY;
+    const prevTipX = trail.length > 0 ? trail[trail.length - 1].x : sx;
+    const prevTipY = trail.length > 0 ? trail[trail.length - 1].y : sy;
 
-    trail.push({ x: outX, y: outY });
+    trail.push({ x: sx, y: sy });
     if (trail.length > TRAIL_HISTORY_LEN) {
       trail.splice(0, trail.length - TRAIL_HISTORY_LEN);
     }
 
-    // Store previous smoothed position (must NOT be extrapolated to prevent feedback loop!)
-    prevSmoothedRef.current = { x: prev.x === -1 ? sx : prev.x, y: prev.y === -1 ? sy : prev.y };
     smoothedRef.current = { x: sx, y: sy };
 
-    // Write directly to the shared ref — no React setState
     handDataRef.current = {
-      tipX: outX,
-      tipY: outY,
-      prevTipX: prevOutX,
-      prevTipY: prevOutY,
+      tipX: sx,
+      tipY: sy,
+      prevTipX,
+      prevTipY,
+      velX: dx,
+      velY: dy,
       velocity,
       handVisible: true,
       isLargeSwing,
-      trailHistory: trail.slice(), // shallow copy so consumers get a snapshot
+      trailHistory: trail.slice(),
+      _frameId: frameIdRef.current,
     };
   }, [videoRef, active]);
 

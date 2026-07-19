@@ -5,20 +5,12 @@ import { SliceDetector } from './SliceDetector.js';
 import { MotionTrail } from './MotionTrail.js';
 import { createJuiceSplash, createScoreParticles } from './Particle.js';
 
-const GRAVITY = 700; // px/s²
-// Score per combo tier
+const GRAVITY = 700;
 const COMBO_SCORES = [0, 10, 20, 35, 50, 75, 100];
 
 /**
  * Core game engine. Instantiated once and stored in a React ref.
  * Decoupled from React — communicates via callbacks.
- *
- * @param {Object} callbacks
- *   onScore(points, combo)   — called when a fruit is sliced
- *   onCombo(combo)           — called when combo increases
- *   onMiss()                 — called when a fruit falls off-screen
- *   onBombHit()              — called when a bomb is sliced
- *   onSlice(isBigSwing)      — called for every successful slice
  */
 export class GameEngine {
   constructor(callbacks = {}) {
@@ -28,12 +20,17 @@ export class GameEngine {
     this.trail = new MotionTrail();
     this.spawner = new FruitSpawner();
     this.detector = new SliceDetector();
-    this.elapsed = 0;     // total ms
+    this.elapsed = 0;
     this.combo = 0;
-    this.comboTimer = 0;  // ms since last slice (combo resets after 1500ms)
-    this.lastDelta = 16;  // last frame delta for render
+    this.comboTimer = 0;
+    this.lastDelta = 16;
     this.W = window.innerWidth;
     this.H = window.innerHeight;
+
+    // Frame-interpolation state for smooth trail between camera frames
+    this._lastHandFrameId = -1;
+    this._interpX = -1;
+    this._interpY = -1;
   }
 
   resize(W, H) {
@@ -49,12 +46,15 @@ export class GameEngine {
     this.elapsed = 0;
     this.combo = 0;
     this.comboTimer = 0;
+    this._lastHandFrameId = -1;
+    this._interpX = -1;
+    this._interpY = -1;
   }
 
   /**
    * Called every frame with delta (ms) and hand tracking data.
-   * @param {number} delta
-   * @param {Object} handData - from useHandTracker
+   * Hand data updates at ~30fps (camera rate), but this runs at 60fps.
+   * We interpolate the cursor position between camera frames for smooth trail.
    */
   update(delta, handData) {
     this.elapsed += delta;
@@ -74,7 +74,26 @@ export class GameEngine {
     for (const f of this.fruits) f.update(delta, GRAVITY);
 
     if (handData?.handVisible) {
-      const { sliced } = this.detector.detect(this.fruits, handData, this.W, this.H);
+      const isNewCameraFrame = handData._frameId !== this._lastHandFrameId;
+
+      if (isNewCameraFrame) {
+        this._lastHandFrameId = handData._frameId;
+        this._interpX = handData.tipX;
+        this._interpY = handData.tipY;
+      } else {
+        // Between camera frames: glide toward current position using velocity
+        this._interpX += handData.velX * 0.5;
+        this._interpY += handData.velY * 0.5;
+      }
+
+      // Use interpolated position for slice detection
+      const interpHandData = {
+        ...handData,
+        tipX: this._interpX,
+        tipY: this._interpY,
+      };
+
+      const { sliced } = this.detector.detect(this.fruits, interpHandData, this.W, this.H);
 
       for (const entity of sliced) {
         if (entity instanceof Bomb) {
@@ -99,6 +118,18 @@ export class GameEngine {
           this.callbacks.onSlice?.(handData.isLargeSwing);
         }
       }
+
+      // Add interpolated point to trail every frame for silky-smooth rendering
+      this.trail.addPoint(
+        this._interpX * this.W,
+        this._interpY * this.H,
+        true,
+        handData.velocity
+      );
+    } else {
+      this.trail.addPoint(-1, -1, false, 0);
+      this._interpX = -1;
+      this._interpY = -1;
     }
 
     for (const p of this.particles) p.update(delta);
@@ -113,27 +144,14 @@ export class GameEngine {
     }
 
     this.fruits = this.fruits.filter((f) => !f.isOffScreen(this.W, this.H));
-
-    if (handData?.handVisible) {
-      this.trail.addPoint(handData.tipX * this.W, handData.tipY * this.H, true, handData.velocity);
-    } else {
-      this.trail.addPoint(-1, -1, false, 0);
-    }
   }
 
-  /**
-   * Renders the entire game layer onto the canvas context.
-   * Call after update().
-   * @param {CanvasRenderingContext2D} ctx
-   */
   render(ctx) {
     const { W, H } = this;
     ctx.clearRect(0, 0, W, H);
 
     for (const f of this.fruits) f.draw(ctx);
-
     for (const p of this.particles) p.draw(ctx);
-
     this.trail.draw(ctx, this.lastDelta);
   }
 }
