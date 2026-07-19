@@ -1,1 +1,26 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', system-ui, sans-serif;
+}
+
+:root {
+  font-family: 'Outfit', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #000;
+  color: #fff;
+  overflow: hidden; /* Game is full screen, no scrolling */
+  touch-action: none; /* Prevent pull-to-refresh on mobile */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Ensure canvas doesn't blur */
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
