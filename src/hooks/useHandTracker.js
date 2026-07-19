@@ -8,28 +8,15 @@ const MODEL_URL =
 const INDEX_TIP = 8;
 const INDEX_MCP = 5;
 
-// Adaptive smoothing — lower = smoother, higher = more responsive
-const SMOOTH_SLOW = 0.50;
-const SMOOTH_FAST = 0.95;
-const VEL_SLOW = 0.003;
-const VEL_FAST = 0.03;
-
-const TRAIL_HISTORY_LEN = 8;
 const HAND_LOST_GRACE_FRAMES = 3;
 
 function defaultHandData() {
   return {
     tipX: -1,
     tipY: -1,
-    prevTipX: -1,
-    prevTipY: -1,
-    velX: 0,
-    velY: 0,
     velocity: 0,
     handVisible: false,
     isLargeSwing: false,
-    trailHistory: [],
-    _frameId: 0,
   };
 }
 
@@ -37,17 +24,15 @@ function defaultHandData() {
  * Initialises MediaPipe HandLandmarker and runs per-frame inference.
  * Returns a mutable ref — game loop reads handDataRef.current directly.
  *
- * The ref also includes velX/velY so the game engine can interpolate
- * between camera frames for buttery-smooth 60fps trail rendering.
+ * Minimal smoothing here — just enough to kill camera jitter.
+ * The game engine handles prev/current tracking for slice detection.
  */
 export function useHandTracker(videoRef, active = true) {
   const landmarkerRef = useRef(null);
   const rafRef = useRef(null);
   const lastVideoTimeRef = useRef(-1);
   const smoothedRef = useRef({ x: -1, y: -1 });
-  const trailRef = useRef([]);
   const handLostCountRef = useRef(0);
-  const frameIdRef = useRef(0);
 
   const handDataRef = useRef(defaultHandData());
 
@@ -103,27 +88,26 @@ export function useHandTracker(videoRef, active = true) {
       handLostCountRef.current++;
       if (handLostCountRef.current > HAND_LOST_GRACE_FRAMES) {
         smoothedRef.current = { x: -1, y: -1 };
-        trailRef.current = [];
         handDataRef.current = defaultHandData();
       }
       return;
     }
 
     handLostCountRef.current = 0;
-    frameIdRef.current++;
 
     const tip = landmarks[INDEX_TIP];
     const mcp = landmarks[INDEX_MCP];
 
+    // Mirror x for front camera
     const rawX = 1 - tip.x;
     const rawY = tip.y;
 
     const prev = smoothedRef.current;
     const isFirst = prev.x === -1;
 
-    // We apply very light smoothing here just to reduce camera jitter.
-    // The GameEngine will do the heavy lifting of interpolating this to 60fps.
-    const alpha = 0.6; 
+    // Very light jitter filter — alpha=0.75 means 75% raw, 25% previous.
+    // This is intentionally close to raw for low latency.
+    const alpha = 0.75;
     const sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
     const sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
 
@@ -134,27 +118,14 @@ export function useHandTracker(videoRef, active = true) {
     const swingDist = Math.hypot((1 - tip.x) - (1 - mcp.x), tip.y - mcp.y);
     const isLargeSwing = velocity > 0.012 && swingDist > 0.08;
 
-    const trail = trailRef.current;
-    const prevTipX = trail.length > 0 ? trail[trail.length - 1].x : sx;
-    const prevTipY = trail.length > 0 ? trail[trail.length - 1].y : sy;
-
-    trail.push({ x: sx, y: sy });
-    if (trail.length > TRAIL_HISTORY_LEN) {
-      trail.splice(0, trail.length - TRAIL_HISTORY_LEN);
-    }
-
     smoothedRef.current = { x: sx, y: sy };
 
     handDataRef.current = {
       tipX: sx,
       tipY: sy,
-      prevTipX,
-      prevTipY,
       velocity,
       handVisible: true,
       isLargeSwing,
-      trailHistory: trail.slice(),
-      _frameId: frameIdRef.current,
     };
   }, [videoRef, active]);
 

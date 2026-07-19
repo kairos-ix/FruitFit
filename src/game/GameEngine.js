@@ -9,8 +9,11 @@ const GRAVITY = 700;
 const COMBO_SCORES = [0, 10, 20, 35, 50, 75, 100];
 
 /**
- * Core game engine. Instantiated once and stored in a React ref.
- * Decoupled from React — communicates via callbacks.
+ * Core game engine. Decoupled from React — communicates via callbacks.
+ *
+ * Key design: NO extra smoothing/interpolation on top of the hand tracker.
+ * The tracker already provides low-latency coordinates.
+ * We just track prev vs current position for slice detection.
  */
 export class GameEngine {
   constructor(callbacks = {}) {
@@ -27,11 +30,9 @@ export class GameEngine {
     this.W = window.innerWidth;
     this.H = window.innerHeight;
 
-    // Frame-interpolation state for smooth trail between camera frames
-    this._interpX = -1;
-    this._interpY = -1;
-    this._prevInterpX = -1;
-    this._prevInterpY = -1;
+    // Previous frame's tip position (normalized 0-1)
+    this._prevTipX = -1;
+    this._prevTipY = -1;
   }
 
   resize(W, H) {
@@ -47,17 +48,10 @@ export class GameEngine {
     this.elapsed = 0;
     this.combo = 0;
     this.comboTimer = 0;
-    this._interpX = -1;
-    this._interpY = -1;
-    this._prevInterpX = -1;
-    this._prevInterpY = -1;
+    this._prevTipX = -1;
+    this._prevTipY = -1;
   }
 
-  /**
-   * Called every frame with delta (ms) and hand tracking data.
-   * Hand data updates at ~30fps (camera rate), but this runs at 60fps.
-   * We interpolate the cursor position between camera frames for smooth trail.
-   */
   update(delta, handData) {
     this.elapsed += delta;
     this.lastDelta = delta;
@@ -76,36 +70,26 @@ export class GameEngine {
     for (const f of this.fruits) f.update(delta, GRAVITY);
 
     if (handData?.handVisible && handData.tipX !== -1) {
-      if (this._interpX === -1) {
-        this._interpX = handData.tipX;
-        this._interpY = handData.tipY;
-        this._prevInterpX = handData.tipX;
-        this._prevInterpY = handData.tipY;
-      } else {
-        // LERP (exponential smoothing) directly at 60fps
-        this._interpX += (handData.tipX - this._interpX) * 0.5;
-        this._interpY += (handData.tipY - this._interpY) * 0.5;
+      const tipX = handData.tipX;
+      const tipY = handData.tipY;
+
+      // On first frame, initialize prev to current so we don't get a giant jump
+      if (this._prevTipX === -1) {
+        this._prevTipX = tipX;
+        this._prevTipY = tipY;
       }
 
-      // Calculate the visual 60fps velocity for hit expansion and trail rendering
-      const velX = this._interpX - this._prevInterpX;
-      const velY = this._interpY - this._prevInterpY;
-      const velocity = Math.hypot(velX, velY);
-
-      this._prevInterpX = this._interpX;
-      this._prevInterpY = this._interpY;
-
-      // Use interpolated position for slice detection
-      const interpHandData = {
-        ...handData,
-        tipX: this._interpX,
-        tipY: this._interpY,
-        prevTipX: this._prevInterpX,
-        prevTipY: this._prevInterpY,
-        velocity: velocity, // override with the 60fps smoothed velocity
+      // Build hand data for slice detection with correct prev/current
+      const sliceData = {
+        tipX: tipX,
+        tipY: tipY,
+        prevTipX: this._prevTipX,
+        prevTipY: this._prevTipY,
+        velocity: handData.velocity,
+        handVisible: true,
       };
 
-      const { sliced } = this.detector.detect(this.fruits, interpHandData, this.W, this.H);
+      const { sliced } = this.detector.detect(this.fruits, sliceData, this.W, this.H);
 
       for (const entity of sliced) {
         if (entity instanceof Bomb) {
@@ -131,19 +115,16 @@ export class GameEngine {
         }
       }
 
-      // Add interpolated point to trail every frame for silky-smooth rendering
-      this.trail.addPoint(
-        this._interpX * this.W,
-        this._interpY * this.H,
-        true,
-        velocity
-      );
+      // Add point to trail for rendering
+      this.trail.addPoint(tipX * this.W, tipY * this.H, true, handData.velocity);
+
+      // Store current as previous for next frame
+      this._prevTipX = tipX;
+      this._prevTipY = tipY;
     } else {
       this.trail.addPoint(-1, -1, false, 0);
-      this._interpX = -1;
-      this._interpY = -1;
-      this._prevInterpX = -1;
-      this._prevInterpY = -1;
+      this._prevTipX = -1;
+      this._prevTipY = -1;
     }
 
     for (const p of this.particles) p.update(delta);
