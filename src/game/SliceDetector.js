@@ -36,38 +36,20 @@ export class SliceDetector {
     const sliced = [];
     this._slicedThisFrame.clear();
 
-    // Speed gate — don't register a slice if the hand is barely moving
+    // Speed gate — don't register a slice if the hand is barely moving or not visible.
+    // We use the 60fps-smoothed 'velocity' which accurately reflects cursor speed.
     if (!handVisible || velocity < MIN_SPEED) return { sliced };
 
-    const dist = vecLen(tipX - prevTipX, tipY - prevTipY);
-    if (dist < MIN_DISTANCE) return { sliced };
-
-    // Build the list of segments to check.
-    // If we have a trail history, use all consecutive pairs for multi-segment detection.
-    // Otherwise fall back to just prevTip → tip.
-    const segments = [];
-
-    if (trailHistory && trailHistory.length >= 2) {
-      // Use the trail — each pair of consecutive points is a segment
-      for (let i = 1; i < trailHistory.length; i++) {
-        const a = trailHistory[i - 1];
-        const b = trailHistory[i];
-        segments.push({
-          ax: a.x * W,
-          ay: a.y * H,
-          bx: b.x * W,
-          by: b.y * H,
-        });
-      }
-    } else {
-      // Fallback: single segment
-      segments.push({
+    // We only use the current frame's movement delta for slicing.
+    // Using the full trail history creates a "laser wall" that unfairly kills fruits after the finger has passed.
+    const segments = [
+      {
         ax: prevTipX * W,
         ay: prevTipY * H,
         bx: tipX * W,
         by: tipY * H,
-      });
-    }
+      }
+    ];
 
     // Velocity-based hit radius expansion
     const expansion = clamp(velocity * HIT_EXPANSION_FACTOR, 0, MAX_HIT_EXPANSION);
