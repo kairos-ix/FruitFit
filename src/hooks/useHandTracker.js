@@ -105,9 +105,9 @@ export function useHandTracker(videoRef, active = true) {
     const prev = smoothedRef.current;
     const isFirst = prev.x === -1;
 
-    // Very light jitter filter — alpha=0.75 means 75% raw, 25% previous.
-    // This is intentionally close to raw for low latency.
-    const alpha = 0.75;
+    // Very light jitter filter — alpha=0.9 means 90% raw, 10% previous.
+    // Nearly raw tracking for minimal latency.
+    const alpha = 0.9;
     const sx = isFirst ? rawX : alpha * rawX + (1 - alpha) * prev.x;
     const sy = isFirst ? rawY : alpha * rawY + (1 - alpha) * prev.y;
 

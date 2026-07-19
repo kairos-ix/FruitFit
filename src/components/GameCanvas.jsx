@@ -38,10 +38,7 @@ export default function GameCanvas() {
         if (combo >= 3) play('combo');
       },
       onMiss: () => {
-        // PRD: missed fruits cost a life (3 strikes rule)
-        loseLife();
         play('miss');
-        setTimeout(() => clearShake(), 400);
       },
       onBombHit: () => {
         resetCombo();
